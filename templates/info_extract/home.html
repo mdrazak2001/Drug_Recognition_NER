@@ -1,0 +1,26 @@
+{% extends 'main.html' %}
+
+{% block content %}
+
+<center><h1>Drug Name Recognition Using NLP</h1></center>
+
+
+{% if context %}
+{{doctor}}
+
+{% else %}
+<center>
+<form method="POST" enctype="multipart/form-data">
+    {% csrf_token %}
+    <label for="pdf">Select PDF File:</label>
+    <input name="pdf" type="file">
+    
+    <label for="pg">Select Pg Number:</label>
+    <input type="pg" name="pg" id="">
+    
+    <p><input type="submit" value="Submit" /></p>
+</form>
+</center>
+{% endif %}
+
+{% endblock %}
