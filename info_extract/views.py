@@ -1,10 +1,12 @@
 from lib2to3.pgen2 import driver
+from urllib import response
 import dateutil.parser
 from distutils.log import info
 from django.shortcuts import render, redirect
 from itsdangerous import exc
 from matplotlib.style import context
 import pandas as pd
+import requests
 # import scispacy
 import spacy
 import re
@@ -60,7 +62,7 @@ def data(request):
     new_drug_list = []
     d = ''
     open = 0
-    print(drug_list)
+    # print(drug_list)
     for i, w in enumerate(drug_list):
         if w == '[':
             continue
@@ -72,14 +74,63 @@ def data(request):
                 continue
             d += w
     print(new_drug_list)
+    ultra_list = []
+    for d in new_drug_list:
+        ultra_list.append(d[0])
+    print(ultra_list)
+    ultra_list = list(dict.fromkeys(ultra_list))
+    new_drug_list = ultra_list
+    # new_drug_list = list(dict.fromkeys(new_drug_list))
+    drug_info, adverse_reactions, del_indices, google_des, google_sideeff = get_drug_info(
+        new_drug_list)
+    new_drug_list = [i for j, i in enumerate(
+        new_drug_list) if j not in del_indices]
+    print(google_sideeff)
     if new_drug_list != -1 and new_drug_list != 'None':
-        context['drug_list'] = new_drug_list
+        dlist = zip(new_drug_list, drug_info, adverse_reactions,
+                    google_des, google_sideeff)
+        context['drug_list'] = dlist
     if doctor != -1 and doctor != 'None':
         context['doctor'] = doctor
     if date != -1 and date != 'None':
         context['date'] = date
-
     return render(request, 'info_extract/data.html', context)
+
+
+def get_drug_info(drug_list):
+    drug_info = []
+    adverse_reactions = []
+    del_indices = []
+    google_desc = []
+    google_sideeff = []
+    google = 'https://www.google.com/search?q='
+    api = 'https://api.fda.gov/drug/label.json?search='
+    for idx, drug in enumerate(drug_list):
+        # print("drug = ", str(drug))
+        if(drug[0] == ' '):
+            drug = drug[1:]
+        endpoint = api + str(drug)
+        # print(endpoint)
+        r = requests.get(endpoint)
+        data = r.json()
+        # print(data['results'])
+        description = ""
+        adverse_reaction = ""
+        try:
+            data = data['results']
+            data = data[0]
+            description = data['description'][0]
+            adverse_reaction = data['adverse_reactions'][0]
+            drug_info.append(description[:400] + '...')
+            adverse_reactions.append(adverse_reaction[:400] + '...')
+            google_des = google + str(drug) + " description"
+            google_eff = google + str(drug) + " side effects"
+            google_desc.append(google_des)
+            google_sideeff.append(google_eff)
+        except:
+            del_indices.append(idx)
+            pass
+    return drug_info, adverse_reactions, del_indices, google_desc, google_sideeff
 
 
 '''Drug Name &  Dose Extraction'''
